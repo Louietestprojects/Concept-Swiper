@@ -17,6 +17,7 @@
 
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; }
   .panel h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); margin-bottom: 14px; }
+  .active-project-name { font-family: var(--font-display); font-size: 20px; color: var(--amber); margin-bottom: 6px; }
 
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .row > * { flex: 1; min-width: 140px; }
@@ -116,6 +117,7 @@
   </section>
 
   <section class="panel" id="project-detail" style="display:none;">
+    <div class="active-project-name" id="detail-project-name"></div>
     <h2>Survey link</h2>
     <div class="link-box">
       <input id="survey-link" readonly />
@@ -136,6 +138,7 @@
   </section>
 
   <section class="panel" id="concepts-panel" style="display:none;">
+    <div class="active-project-name" id="concepts-project-name"></div>
     <h2>Concepts</h2>
     <label class="upload-drop" id="upload-drop">
       Click to choose PNG files (multiple allowed) — uploaded in the order selected
@@ -165,6 +168,7 @@
     createProjectBtn: $("create-project-btn"),
     projectMsg: $("project-msg"),
     projectDetail: $("project-detail"),
+    detailProjectName: $("detail-project-name"),
     surveyLink: $("survey-link"),
     copyLinkBtn: $("copy-link-btn"),
     statConcepts: $("stat-concepts"),
@@ -174,6 +178,7 @@
     downloadReportBtn: $("download-report-btn"),
     reportMsg: $("report-msg"),
     conceptsPanel: $("concepts-panel"),
+    conceptsProjectName: $("concepts-project-name"),
     uploadDrop: $("upload-drop"),
     fileInput: $("file-input"),
     uploadMsg: $("upload-msg"),
@@ -265,6 +270,8 @@
     }
     els.projectDetail.style.display = "";
     els.conceptsPanel.style.display = "";
+    els.detailProjectName.textContent = currentProject.name;
+    els.conceptsProjectName.textContent = currentProject.name;
     els.surveyLink.value = `${location.origin}/survey.html?project=${currentProject.id}`;
     setMsg(els.reportMsg, "");
     await Promise.all([loadConcepts(), loadStats()]);
@@ -318,9 +325,9 @@
     }
   }
 
-  els.uploadDrop.addEventListener("click", (e) => {
-    if (e.target !== els.fileInput) els.fileInput.click();
-  });
+  // Note: no extra click handler needed here — the <label> already wraps
+  // the <input type="file">, so the browser opens the picker on its own.
+  // Adding a second `.click()` call was opening the dialog twice.
 
   els.fileInput.addEventListener("change", async () => {
     const files = Array.from(els.fileInput.files || []).filter((f) => f.type === "image/png");
