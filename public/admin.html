@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concept Test — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  body { padding: 28px 18px 60px; }
+  .shell { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 24px; }
+  header .sub { color: var(--text-dim); font-size: 14px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; }
+  .panel h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); margin-bottom: 14px; }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .row > * { flex: 1; min-width: 140px; }
+  .row .btn { flex: 0 0 auto; }
+
+  label.field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--text-dim); }
+  label.field input { width: 100%; }
+
+  select { font-family: var(--font-body); background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 15px; width: 100%; }
+
+  .msg { font-size: 13px; margin-top: 10px; }
+  .msg.error { color: var(--left); }
+  .msg.ok { color: var(--right); }
+
+  .link-box { display: flex; gap: 8px; }
+  .link-box input { font-family: monospace; font-size: 13px; }
+
+  .stat-row { display: flex; gap: 28px; margin-top: 4px; flex-wrap: wrap; }
+  .stat { display: flex; flex-direction: column; }
+  .stat .num { font-family: var(--font-display); font-size: 26px; }
+  .stat .lbl { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
+
+  .upload-drop {
+    border: 1.5px dashed var(--line);
+    border-radius: var(--radius-sm);
+    padding: 22px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    display: block;
+  }
+  .upload-drop:hover { border-color: var(--amber); color: var(--text); }
+  .upload-drop input { display: none; }
+
+  .grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
+  .thumb { width: 120px; }
+  .thumb .imgwrap {
+    position: relative;
+    width: 120px; height: 150px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+  .thumb .del {
+    position: absolute; top: 4px; right: 4px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(20,20,20,0.75); color: #fff; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; cursor: pointer; padding: 0;
+  }
+  .thumb .order { position: absolute; top: 4px; left: 6px; font-size: 11px; color: var(--text-dim); background: rgba(20,20,20,0.6); padding: 1px 5px; border-radius: 6px; }
+  .thumb .cname { font-size: 12px; margin-top: 6px; color: var(--text-dim); text-align: center; word-break: break-word; }
+
+  fieldset { border: none; padding: 0; margin: 0; }
+  fieldset[disabled] { opacity: 0.45; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div>
+      <h1>Concept Test — Admin</h1>
+      <div class="sub">Create a project, upload PNG concepts, share the survey link, export results.</div>
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2>Admin key</h2>
+    <div class="row">
+      <label class="field" style="flex:1">
+        <span>Required to create projects, upload concepts, and download reports</span>
+        <input type="password" id="admin-key" placeholder="Enter admin key" />
+      </label>
+    </div>
+    <div class="msg" id="key-msg">Set with the ADMIN_KEY environment variable on your Netlify site. Defaults to <code>changeme</code> if unset.</div>
+  </section>
+
+  <fieldset id="main-fieldset">
+
+  <section class="panel">
+    <h2>Project</h2>
+    <div class="row">
+      <select id="project-select"><option value="">Loading projects…</option></select>
+      <button class="btn secondary" id="refresh-projects-btn">Refresh</button>
+    </div>
+
+    <div style="margin-top:16px;" class="row">
+      <label class="field"><span>New project name</span><input id="new-project-name" placeholder="e.g. Snack Concepts — Wave 1" /></label>
+      <label class="field" style="max-width:160px;"><span>Decision window (sec)</span><input id="new-project-seconds" type="number" min="1" max="30" value="6" /></label>
+      <button class="btn accent" id="create-project-btn">Create project</button>
+    </div>
+    <div class="msg" id="project-msg"></div>
+  </section>
+
+  <section class="panel" id="project-detail" style="display:none;">
+    <h2>Survey link</h2>
+    <div class="link-box">
+      <input id="survey-link" readonly />
+      <button class="btn secondary" id="copy-link-btn">Copy</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><div class="num" id="stat-concepts">0</div><div class="lbl">Concepts</div></div>
+      <div class="stat"><div class="num" id="stat-respondents">0</div><div class="lbl">Respondents</div></div>
+      <div class="stat"><div class="num" id="stat-responses">0</div><div class="lbl">Swipes recorded</div></div>
+    </div>
+
+    <div class="row" style="margin-top:18px;">
+      <button class="btn" id="refresh-stats-btn">Refresh stats</button>
+      <button class="btn accent" id="download-report-btn">Download Excel report</button>
+    </div>
+    <div class="msg" id="report-msg"></div>
+  </section>
+
+  <section class="panel" id="concepts-panel" style="display:none;">
+    <h2>Concepts</h2>
+    <label class="upload-drop" id="upload-drop">
+      Click to choose PNG files (multiple allowed) — uploaded in the order selected
+      <input type="file" id="file-input" accept="image/png" multiple />
+    </label>
+    <div class="msg" id="upload-msg"></div>
+    <div class="grid" id="concepts-grid"></div>
+  </section>
+
+  </fieldset>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    adminKey: $("admin-key"),
+    keyMsg: $("key-msg"),
+    fieldset: $("main-fieldset"),
+    projectSelect: $("project-select"),
+    refreshProjectsBtn: $("refresh-projects-btn"),
+    newProjectName: $("new-project-name"),
+    newProjectSeconds: $("new-project-seconds"),
+    createProjectBtn: $("create-project-btn"),
+    projectMsg: $("project-msg"),
+    projectDetail: $("project-detail"),
+    surveyLink: $("survey-link"),
+    copyLinkBtn: $("copy-link-btn"),
+    statConcepts: $("stat-concepts"),
+    statRespondents: $("stat-respondents"),
+    statResponses: $("stat-responses"),
+    refreshStatsBtn: $("refresh-stats-btn"),
+    downloadReportBtn: $("download-report-btn"),
+    reportMsg: $("report-msg"),
+    conceptsPanel: $("concepts-panel"),
+    uploadDrop: $("upload-drop"),
+    fileInput: $("file-input"),
+    uploadMsg: $("upload-msg"),
+    conceptsGrid: $("concepts-grid"),
+  };
+
+  let projects = [];
+  let currentProject = null;
+  let currentConcepts = [];
+
+  // ---- admin key persistence (plain localStorage; this is a real deployed
+  // site, not a sandboxed artifact, so this is just normal browser storage) ----
+  els.adminKey.value = localStorage.getItem("concept_admin_key") || "";
+  els.adminKey.addEventListener("input", () => {
+    localStorage.setItem("concept_admin_key", els.adminKey.value);
+  });
+
+  function authHeaders(extra) {
+    return Object.assign({ "x-admin-key": els.adminKey.value }, extra || {});
+  }
+
+  function setMsg(el, text, kind) {
+    el.textContent = text || "";
+    el.className = "msg" + (kind ? " " + kind : "");
+  }
+
+  async function api(path, opts) {
+    const res = await fetch(path, opts);
+    let body = null;
+    try { body = await res.json(); } catch (_) { /* non-JSON, fine for binary endpoints */ }
+    if (!res.ok) {
+      const message = (body && body.error) || `Request failed (${res.status})`;
+      throw new Error(message);
+    }
+    return body;
+  }
+
+  // ---------------------------- projects ----------------------------
+  async function loadProjects(selectId) {
+    projects = await api("/api/projects");
+    els.projectSelect.innerHTML = "";
+    if (projects.length === 0) {
+      els.projectSelect.innerHTML = '<option value="">No projects yet — create one below</option>';
+      currentProject = null;
+      els.projectDetail.style.display = "none";
+      els.conceptsPanel.style.display = "none";
+      return;
+    }
+    projects.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      els.projectSelect.appendChild(opt);
+    });
+    const toSelect = selectId && projects.find((p) => p.id === selectId) ? selectId : projects[0].id;
+    els.projectSelect.value = toSelect;
+    await selectProject(toSelect);
+  }
+
+  els.projectSelect.addEventListener("change", (e) => selectProject(e.target.value));
+  els.refreshProjectsBtn.addEventListener("click", () => loadProjects(currentProject && currentProject.id));
+
+  els.createProjectBtn.addEventListener("click", async () => {
+    const name = els.newProjectName.value.trim();
+    if (!name) { setMsg(els.projectMsg, "Give the project a name first.", "error"); return; }
+    els.createProjectBtn.disabled = true;
+    try {
+      const project = await api("/api/projects", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ name, timerSeconds: els.newProjectSeconds.value }),
+      });
+      els.newProjectName.value = "";
+      setMsg(els.projectMsg, `Created "${project.name}".`, "ok");
+      await loadProjects(project.id);
+    } catch (err) {
+      setMsg(els.projectMsg, err.message, "error");
+    } finally {
+      els.createProjectBtn.disabled = false;
+    }
+  });
+
+  async function selectProject(id) {
+    currentProject = projects.find((p) => p.id === id) || null;
+    if (!currentProject) {
+      els.projectDetail.style.display = "none";
+      els.conceptsPanel.style.display = "none";
+      return;
+    }
+    els.projectDetail.style.display = "";
+    els.conceptsPanel.style.display = "";
+    els.surveyLink.value = `${location.origin}/survey.html?project=${currentProject.id}`;
+    setMsg(els.reportMsg, "");
+    await Promise.all([loadConcepts(), loadStats()]);
+  }
+
+  els.copyLinkBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(els.surveyLink.value);
+      els.copyLinkBtn.textContent = "Copied";
+      setTimeout(() => (els.copyLinkBtn.textContent = "Copy"), 1200);
+    } catch (_) {
+      els.surveyLink.select();
+    }
+  });
+
+  // ---------------------------- concepts ----------------------------
+  async function loadConcepts() {
+    currentConcepts = await api(`/api/concepts?projectId=${currentProject.id}`);
+    els.statConcepts.textContent = currentConcepts.length;
+    renderConcepts();
+  }
+
+  function renderConcepts() {
+    els.conceptsGrid.innerHTML = "";
+    currentConcepts.forEach((c) => {
+      const card = document.createElement("div");
+      card.className = "thumb";
+      card.innerHTML = `
+        <div class="imgwrap">
+          <span class="order">#${c.order + 1}</span>
+          <button class="del" title="Delete">&times;</button>
+          <img src="${c.imageUrl}" alt="${c.name}" />
+        </div>
+        <div class="cname">${c.name}</div>
+      `;
+      card.querySelector(".del").addEventListener("click", () => deleteConcept(c.id));
+      els.conceptsGrid.appendChild(card);
+    });
+  }
+
+  async function deleteConcept(id) {
+    if (!confirm("Delete this concept? This can't be undone.")) return;
+    try {
+      await api(`/api/concepts?id=${id}&projectId=${currentProject.id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      await loadConcepts();
+    } catch (err) {
+      setMsg(els.uploadMsg, err.message, "error");
+    }
+  }
+
+  els.uploadDrop.addEventListener("click", (e) => {
+    if (e.target !== els.fileInput) els.fileInput.click();
+  });
+
+  els.fileInput.addEventListener("change", async () => {
+    const files = Array.from(els.fileInput.files || []).filter((f) => f.type === "image/png");
+    if (files.length === 0) return;
+    setMsg(els.uploadMsg, `Uploading ${files.length} file(s)…`, "");
+    let done = 0, failed = 0;
+    for (const file of files) {
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        await api("/api/concepts", {
+          method: "POST",
+          headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            projectId: currentProject.id,
+            name: file.name.replace(/\.png$/i, ""),
+            imageBase64: dataUrl,
+          }),
+        });
+        done += 1;
+      } catch (err) {
+        failed += 1;
+      }
+      setMsg(els.uploadMsg, `Uploaded ${done}/${files.length}${failed ? `, ${failed} failed` : ""}…`, "");
+    }
+    setMsg(els.uploadMsg, `Done. ${done} uploaded${failed ? `, ${failed} failed` : ""}.`, failed ? "error" : "ok");
+    els.fileInput.value = "";
+    await loadConcepts();
+  });
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------------------------- stats + report ----------------------------
+  async function loadStats() {
+    try {
+      const responses = await api(`/api/responses?projectId=${currentProject.id}`, {
+        headers: authHeaders(),
+      });
+      const respondents = new Set(responses.map((r) => r.sessionId));
+      els.statRespondents.textContent = respondents.size;
+      els.statResponses.textContent = responses.length;
+    } catch (err) {
+      els.statRespondents.textContent = "—";
+      els.statResponses.textContent = "—";
+    }
+  }
+  els.refreshStatsBtn.addEventListener("click", loadStats);
+
+  const METRIC_LABEL = { purchase_intent: "Purchase Intent", uniqueness: "Uniqueness" };
+  const SWIPE_LABEL = {
+    purchase_intent: { right: "Would buy", left: "Not for me", timeout: "Skipped (no response)" },
+    uniqueness: { right: "Feels new", left: "Seen before", timeout: "Skipped (no response)" },
+  };
+
+  els.downloadReportBtn.addEventListener("click", async () => {
+    setMsg(els.reportMsg, "Building report…", "");
+    els.downloadReportBtn.disabled = true;
+    try {
+      const [responses, concepts] = await Promise.all([
+        api(`/api/responses?projectId=${currentProject.id}`, { headers: authHeaders() }),
+        api(`/api/concepts?projectId=${currentProject.id}`),
+      ]);
+
+      const conceptById = {};
+      concepts.forEach((c) => { conceptById[c.id] = c; });
+
+      const rawRows = responses
+        .slice()
+        .sort((a, b) => a.submittedAt - b.submittedAt)
+        .map((r) => {
+          const concept = conceptById[r.conceptId];
+          return {
+            "Respondent ID": r.sessionId,
+            "Concept": concept ? concept.name : r.conceptId,
+            "Metric": METRIC_LABEL[r.metric] || r.metric,
+            "Swipe": r.swipe,
+            "Result": (SWIPE_LABEL[r.metric] && SWIPE_LABEL[r.metric][r.swipe]) || r.swipe,
+            "Time to swipe (sec)": Math.round((r.timeMs || 0) / 10) / 100,
+            "Submitted at": new Date(r.submittedAt).toISOString(),
+          };
+        });
+
+      const summaryByConcept = {};
+      responses.forEach((r) => {
+        const c = conceptById[r.conceptId];
+        const name = c ? c.name : r.conceptId;
+        if (!summaryByConcept[name]) {
+          summaryByConcept[name] = {
+            purchase_intent: { right: 0, left: 0, timeout: 0, timeSum: 0, timeN: 0 },
+            uniqueness: { right: 0, left: 0, timeout: 0, timeSum: 0, timeN: 0 },
+          };
+        }
+        const bucket = summaryByConcept[name][r.metric];
+        if (!bucket) return;
+        bucket[r.swipe] = (bucket[r.swipe] || 0) + 1;
+        if (r.swipe !== "timeout") {
+          bucket.timeSum += r.timeMs || 0;
+          bucket.timeN += 1;
+        }
+      });
+
+      const pct = (right, left) => (right + left === 0 ? "" : Math.round((right / (right + left)) * 1000) / 10);
+      const avgSec = (sum, n) => (n === 0 ? "" : Math.round((sum / n) / 10) / 100);
+
+      const summaryRows = Object.keys(summaryByConcept).map((name) => {
+        const pi = summaryByConcept[name].purchase_intent;
+        const uq = summaryByConcept[name].uniqueness;
+        return {
+          "Concept": name,
+          "PI: % Would Buy": pct(pi.right, pi.left),
+          "PI: Avg Time (sec)": avgSec(pi.timeSum, pi.timeN),
+          "PI: Skipped": pi.timeout,
+          "Uniqueness: % Feels New": pct(uq.right, uq.left),
+          "Uniqueness: Avg Time (sec)": avgSec(uq.timeSum, uq.timeN),
+          "Uniqueness: Skipped": uq.timeout,
+        };
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "Summary by Concept");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawRows), "Raw Responses");
+
+      const safeName = currentProject.name.replace(/[^a-z0-9\-_]+/gi, "_").slice(0, 60);
+      XLSX.writeFile(wb, `${safeName || "concept_test"}_results.xlsx`);
+      setMsg(els.reportMsg, `Exported ${rawRows.length} swipe records.`, "ok");
+    } catch (err) {
+      setMsg(els.reportMsg, err.message, "error");
+    } finally {
+      els.downloadReportBtn.disabled = false;
+    }
+  });
+
+  loadProjects();
+})();
+</script>
+</body>
+</html>

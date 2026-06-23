@@ -1,0 +1,9 @@
+{
+  "name": "concept-swipe-poc",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Swipe-based concept test (purchase intent + uniqueness) with PNG concept uploader and Excel export.",
+  "dependencies": {
+    "@netlify/blobs": "*"
+  }
+}

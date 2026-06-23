@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Concept Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css" />
+<style>
+  body { display: flex; flex-direction: column; }
+
+  .wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+    min-height: 100vh;
+  }
+
+  .screen { display: none; flex: 1; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ---------- centered status screens (loading / error / done) ---------- */
+  .center-screen { align-items: center; justify-content: center; text-align: center; gap: 14px; }
+  .center-screen .eyebrow { color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: .12em; }
+  .center-screen h1 { font-size: 26px; }
+  .center-screen p { color: var(--text-dim); font-size: 15px; max-width: 320px; line-height: 1.5; }
+
+  /* ---------------------------- breaker screen ---------------------------- */
+  .breaker { justify-content: center; align-items: stretch; gap: 22px; padding-top: 12px; padding-bottom: 40px; }
+  .breaker .pill { align-self: flex-start; }
+  .breaker h1 { font-size: 34px; line-height: 1.08; margin-top: 14px; }
+  .breaker .lede { color: var(--text-dim); font-size: 16px; line-height: 1.55; margin-top: 6px; }
+  .swipe-key { display: flex; gap: 12px; margin-top: 10px; }
+  .swipe-key .opt {
+    flex: 1;
+    border-radius: var(--radius);
+    padding: 16px 14px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .swipe-key .opt .dir { font-family: var(--font-display); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .swipe-key .opt.no .dir { color: var(--left); }
+  .swipe-key .opt.yes .dir { color: var(--right); }
+  .swipe-key .opt .desc { font-size: 14px; color: var(--text-dim); line-height: 1.4; }
+  .breaker .spacer { flex: 1; }
+  .breaker .btn { width: 100%; padding: 16px; font-size: 16px; }
+
+  /* ----------------------------- swipe screen ----------------------------- */
+  .swipe-screen { padding-top: 16px; padding-bottom: 28px; }
+  .swipe-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .swipe-top .metric-pill { color: var(--amber); border-color: rgba(242,179,61,0.35); }
+  .swipe-top .counter { font-family: var(--font-display); font-size: 13px; color: var(--text-dim); }
+
+  .timer-track { height: 5px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin-bottom: 20px; }
+  .timer-fill { height: 100%; width: 100%; background: var(--amber); border-radius: 4px; }
+
+  .stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
+
+  .card {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 3 / 4;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    will-change: transform;
+  }
+  .card img {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--card);
+    padding: 18px;
+  }
+  .card .name {
+    padding: 12px 16px 16px;
+    color: var(--card-text);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+
+  .stamp {
+    position: absolute;
+    top: 22px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: .06em;
+    border: 3px solid currentColor;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .stamp.no { left: 18px; color: var(--left); transform: rotate(-14deg); }
+  .stamp.yes { right: 18px; color: var(--right); transform: rotate(14deg); }
+
+  .swipe-actions { display: flex; justify-content: center; gap: 22px; margin-top: 22px; }
+  .round-btn {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .round-btn.no { color: var(--left); }
+  .round-btn.yes { color: var(--right); }
+  .action-labels { display: flex; justify-content: center; gap: 22px; margin-top: 8px; }
+  .action-labels span { width: 64px; text-align: center; font-size: 12px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+
+  <!-- LOADING -->
+  <section class="screen center-screen active" id="screen-loading">
+    <p class="eyebrow">Loading</p>
+    <h1>Getting your concepts ready…</h1>
+  </section>
+
+  <!-- ERROR -->
+  <section class="screen center-screen" id="screen-error">
+    <p class="eyebrow">Can't load this survey</p>
+    <h1 id="error-title">Something's not right</h1>
+    <p id="error-body">Please check the link you were given, or contact whoever sent it to you.</p>
+  </section>
+
+  <!-- BREAKER -->
+  <section class="screen breaker" id="screen-breaker">
+    <span class="pill" id="breaker-pill">Part 1 of 2</span>
+    <h1 id="breaker-title">Willingness to Buy</h1>
+    <p class="lede" id="breaker-lede">
+      For each idea, swipe to tell us whether you'd actually buy it.
+    </p>
+    <div class="swipe-key">
+      <div class="opt no">
+        <div class="dir">&larr; Swipe left</div>
+        <div class="desc" id="breaker-no-desc">Not for me</div>
+      </div>
+      <div class="opt yes">
+        <div class="dir">Swipe right &rarr;</div>
+        <div class="desc" id="breaker-yes-desc">I'd buy this</div>
+      </div>
+    </div>
+    <p class="lede" id="breaker-timer-note" style="margin-top:0;font-size:14px;"></p>
+    <div class="spacer"></div>
+    <button class="btn accent" id="breaker-start-btn">I'm ready</button>
+  </section>
+
+  <!-- SWIPE -->
+  <section class="screen swipe-screen" id="screen-swipe">
+    <div class="swipe-top">
+      <span class="pill metric-pill" id="metric-pill">Purchase Intent</span>
+      <span class="counter" id="counter">1 / 10</span>
+    </div>
+    <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+    <div class="stage">
+      <div class="card" id="card">
+        <div class="stamp no" id="stamp-no">NO</div>
+        <div class="stamp yes" id="stamp-yes">YES</div>
+        <img id="card-img" src="" alt="Concept" />
+        <div class="name" id="card-name"></div>
+      </div>
+    </div>
+    <div class="swipe-actions">
+      <button class="round-btn no" id="btn-no" aria-label="Swipe left">&#10005;</button>
+      <button class="round-btn yes" id="btn-yes" aria-label="Swipe right">&#10003;</button>
+    </div>
+    <div class="action-labels">
+      <span id="label-no">Not for me</span>
+      <span id="label-yes">I'd buy this</span>
+    </div>
+  </section>
+
+  <!-- DONE -->
+  <section class="screen center-screen" id="screen-done">
+    <p class="eyebrow">All done</p>
+    <h1>Thanks for your input!</h1>
+    <p>Your responses have been recorded. You can close this tab now.</p>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const PASS = {
+    purchase_intent: {
+      key: "purchase_intent",
+      pillLabel: "Purchase Intent",
+      breakerPill: "Part 1 of 2",
+      title: "Willingness to Buy",
+      lede: "For each idea, swipe to tell us whether you'd actually buy it.",
+      noDesc: "Not for me",
+      yesDesc: "I'd buy this",
+      noLabel: "Not for me",
+      yesLabel: "I'd buy this",
+    },
+    uniqueness: {
+      key: "uniqueness",
+      pillLabel: "Uniqueness",
+      breakerPill: "Part 2 of 2",
+      title: "How New Does This Feel?",
+      lede: "Same ideas, different question this time: does it feel new, or like something you've already seen?",
+      noDesc: "Seen it before",
+      yesDesc: "Feels new",
+      noLabel: "Seen before",
+      yesLabel: "Feels new",
+    },
+  };
+
+  const els = {
+    wrap: document.getElementById("wrap"),
+    screens: Array.from(document.querySelectorAll(".screen")),
+    errorTitle: document.getElementById("error-title"),
+    errorBody: document.getElementById("error-body"),
+    breakerPill: document.getElementById("breaker-pill"),
+    breakerTitle: document.getElementById("breaker-title"),
+    breakerLede: document.getElementById("breaker-lede"),
+    breakerNoDesc: document.getElementById("breaker-no-desc"),
+    breakerYesDesc: document.getElementById("breaker-yes-desc"),
+    breakerTimerNote: document.getElementById("breaker-timer-note"),
+    breakerStartBtn: document.getElementById("breaker-start-btn"),
+    metricPill: document.getElementById("metric-pill"),
+    counter: document.getElementById("counter"),
+    timerFill: document.getElementById("timer-fill"),
+    card: document.getElementById("card"),
+    cardImg: document.getElementById("card-img"),
+    cardName: document.getElementById("card-name"),
+    stampNo: document.getElementById("stamp-no"),
+    stampYes: document.getElementById("stamp-yes"),
+    btnNo: document.getElementById("btn-no"),
+    btnYes: document.getElementById("btn-yes"),
+    labelNo: document.getElementById("label-no"),
+    labelYes: document.getElementById("label-yes"),
+  };
+
+  function showScreen(id) {
+    els.screens.forEach((s) => s.classList.toggle("active", s.id === id));
+  }
+
+  function showError(title, body) {
+    els.errorTitle.textContent = title;
+    els.errorBody.textContent = body;
+    showScreen("screen-error");
+  }
+
+  // ---- state ----
+  const sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+  let project = null;
+  let concepts = [];
+  let order = [];
+  let idx = 0;
+  let currentPassKey = null;
+  let startTime = 0;
+  let timeoutHandle = null;
+  let locked = false;
+
+  function shuffled(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  async function init() {
+    const projectId = new URLSearchParams(location.search).get("project");
+    if (!projectId) {
+      showError("No project specified", "This link is missing its project ID. Ask the survey owner for the correct link.");
+      return;
+    }
+    try {
+      const [projRes, conceptsRes] = await Promise.all([
+        fetch(`/api/projects?id=${encodeURIComponent(projectId)}`),
+        fetch(`/api/concepts?projectId=${encodeURIComponent(projectId)}`),
+      ]);
+      if (!projRes.ok) {
+        showError("Survey not found", "This link doesn't match an active project.");
+        return;
+      }
+      project = await projRes.json();
+      concepts = await conceptsRes.json();
+      if (!Array.isArray(concepts) || concepts.length === 0) {
+        showError("Nothing to show yet", "This project doesn't have any concepts uploaded yet.");
+        return;
+      }
+      showBreaker("purchase_intent");
+    } catch (err) {
+      showError("Connection problem", "Couldn't reach the survey. Check your connection and reload.");
+    }
+  }
+
+  function showBreaker(passKey) {
+    currentPassKey = passKey;
+    const p = PASS[passKey];
+    els.breakerPill.textContent = p.breakerPill;
+    els.breakerTitle.textContent = p.title;
+    els.breakerLede.textContent = p.lede;
+    els.breakerNoDesc.textContent = p.noDesc;
+    els.breakerYesDesc.textContent = p.yesDesc;
+    els.breakerTimerNote.textContent = `You'll have ${project.timerSeconds}s to decide on each one — if time runs out, it counts as a skip.`;
+    showScreen("screen-breaker");
+  }
+
+  els.breakerStartBtn.addEventListener("click", () => {
+    order = shuffled(concepts);
+    idx = 0;
+    showScreen("screen-swipe");
+    loadCurrent();
+  });
+
+  function currentConcept() { return order[idx]; }
+
+  function loadCurrent() {
+    if (idx >= order.length) {
+      if (currentPassKey === "purchase_intent") {
+        showBreaker("uniqueness");
+      } else {
+        showScreen("screen-done");
+      }
+      return;
+    }
+    const p = PASS[currentPassKey];
+    els.metricPill.textContent = p.pillLabel;
+    els.counter.textContent = `${idx + 1} / ${order.length}`;
+    els.labelNo.textContent = p.noLabel;
+    els.labelYes.textContent = p.yesLabel;
+
+    const concept = currentConcept();
+    els.cardImg.src = concept.imageUrl;
+    els.cardName.textContent = concept.name;
+    resetCardTransform();
+    startTimerBar(project.timerSeconds);
+    startTime = performance.now();
+    locked = false;
+
+    clearTimeout(timeoutHandle);
+    timeoutHandle = setTimeout(() => {
+      handleDecision("timeout", project.timerSeconds * 1000);
+    }, project.timerSeconds * 1000);
+  }
+
+  function startTimerBar(seconds) {
+    els.timerFill.style.transition = "none";
+    els.timerFill.style.width = "100%";
+    void els.timerFill.offsetWidth; // force reflow
+    els.timerFill.style.transition = `width ${seconds}s linear`;
+    requestAnimationFrame(() => { els.timerFill.style.width = "0%"; });
+  }
+
+  function resetCardTransform() {
+    els.card.style.transition = "none";
+    els.card.style.transform = "translate(0,0) rotate(0deg)";
+    els.card.style.opacity = "1";
+    els.stampNo.style.opacity = "0";
+    els.stampYes.style.opacity = "0";
+    void els.card.offsetWidth;
+    els.card.style.transition = "";
+  }
+
+  function submitResponse(swipe, timeMs) {
+    const concept = currentConcept();
+    fetch("/api/responses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectId: project.id,
+        sessionId,
+        conceptId: concept.id,
+        metric: currentPassKey,
+        swipe,
+        timeMs: Math.round(timeMs),
+      }),
+    }).catch(() => { /* best effort; UI never blocks on this */ });
+  }
+
+  function handleDecision(swipe, timeMsOverride) {
+    if (locked) return;
+    locked = true;
+    clearTimeout(timeoutHandle);
+    const timeMs = timeMsOverride != null ? timeMsOverride : (performance.now() - startTime);
+    submitResponse(swipe, timeMs);
+    animateOut(swipe, () => {
+      idx += 1;
+      loadCurrent();
+    });
+  }
+
+  function animateOut(swipe, done) {
+    const dir = swipe === "left" ? -1 : 1;
+    const distance = window.innerWidth;
+    els.card.style.transition = "transform .28s ease, opacity .28s ease";
+    els.card.style.transform = `translate(${dir * distance}px, -10px) rotate(${dir * 28}deg)`;
+    els.card.style.opacity = "0";
+    setTimeout(done, 220);
+  }
+
+  // ---- drag handling (pointer events cover mouse + touch + pen) ----
+  let dragging = false, startX = 0, deltaX = 0;
+  const THRESHOLD = 110;
+
+  els.card.addEventListener("pointerdown", (e) => {
+    if (locked) return;
+    dragging = true;
+    startX = e.clientX;
+    els.card.setPointerCapture(e.pointerId);
+    els.card.style.transition = "none";
+  });
+
+  els.card.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    deltaX = e.clientX - startX;
+    const rot = Math.max(-25, Math.min(25, deltaX / 12));
+    els.card.style.transform = `translate(${deltaX}px, 0) rotate(${rot}deg)`;
+    const t = Math.min(1, Math.abs(deltaX) / THRESHOLD);
+    els.stampNo.style.opacity = deltaX < 0 ? t : 0;
+    els.stampYes.style.opacity = deltaX > 0 ? t : 0;
+  });
+
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    if (Math.abs(deltaX) > THRESHOLD) {
+      handleDecision(deltaX < 0 ? "left" : "right");
+    } else {
+      els.card.style.transition = "transform .25s ease";
+      els.card.style.transform = "translate(0,0) rotate(0deg)";
+      els.stampNo.style.opacity = 0;
+      els.stampYes.style.opacity = 0;
+    }
+    deltaX = 0;
+  }
+
+  els.card.addEventListener("pointerup", endDrag);
+  els.card.addEventListener("pointercancel", endDrag);
+
+  els.btnNo.addEventListener("click", () => { if (!locked) handleDecision("left"); });
+  els.btnYes.addEventListener("click", () => { if (!locked) handleDecision("right"); });
+
+  document.addEventListener("keydown", (e) => {
+    if (!els.screens.find((s) => s.id === "screen-swipe").classList.contains("active")) return;
+    if (e.key === "ArrowLeft") handleDecision("left");
+    if (e.key === "ArrowRight") handleDecision("right");
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
